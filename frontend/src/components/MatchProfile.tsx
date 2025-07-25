@@ -5,10 +5,11 @@ import { generateMatchInsights } from '../utils/mockData';
 
 interface MatchProfileProps {
   user: User;
-  onNext: () => void;
+  onPass: () => void;
+  onStartChatting: (user: User) => void;
 }
 
-const MatchProfile: React.FC<MatchProfileProps> = ({ user, onNext }) => {
+const MatchProfile: React.FC<MatchProfileProps> = ({ user, onPass, onStartChatting }) => {
   const [showInsights, setShowInsights] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const insights = generateMatchInsights(user);
@@ -19,8 +20,12 @@ const MatchProfile: React.FC<MatchProfileProps> = ({ user, onNext }) => {
         setShowInsights(true);
       }, 500);
     } else {
-      onNext();
+      onPass();
     }
+  };
+
+  const onNext = () => {
+    onStartChatting(user);
   };
 
   const PersonalityBar: React.FC<{ label: string; value: number }> = ({ label, value }) => (

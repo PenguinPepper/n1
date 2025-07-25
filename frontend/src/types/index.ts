@@ -48,3 +48,19 @@ export interface VibeMatch {
   similarity: number;
   sharedContent: string[];
 }
+
+export interface ChatMessage {
+    id: string;
+    senderId: string;
+    text: string;
+    timestamp: Date;
+    type: 'text' | 'image' | 'video';
+}
+
+export interface Conversation {
+  id: string;
+  participants: User[];
+  messages: ChatMessage[];
+  lastMessage?: ChatMessage;
+  unreadCount: number;
+}

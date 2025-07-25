@@ -1,4 +1,4 @@
-import type { User, MatchInsight, DateIdea, TasteResult, VibeMatch } from '../types';
+import type { User, MatchInsight, DateIdea, TasteResult, VibeMatch, ChatMessage, Conversation } from '../types';
 
 export const currentUser: User = {
   id: 'current-user',
@@ -164,3 +164,24 @@ export const generateVibeMatches = (content: string): VibeMatch[] => [
     sharedContent: ['Atmospheric Music', 'Chill Vibes']
   }
 ];
+
+export const generateMockChatMessages = (userId: string): ChatMessage[] => {
+  const baseMessages: Omit<ChatMessage, 'id' | 'timestamp'>[] = [
+    { senderId: userId, text: "Hey! Thanks for the match 😊", type: 'text' },
+    { senderId: 'current-user', text: "Hi! I loved your taste in music, especially Tame Impala!", type: 'text' },
+    { senderId: userId, text: "Right?! Their new album is incredible. Have you seen them live?", type: 'text' },
+    { senderId: 'current-user', text: "Not yet, but it's definitely on my bucket list! 🎵", type: 'text' },
+    { senderId: userId, text: "We should definitely go together when they tour again!", type: 'text' },
+    { senderId: 'current-user', text: "That sounds amazing! I'd love that", type: 'text' },
+    { senderId: userId, text: "Perfect! So tell me, what's your favorite coffee spot in the city?", type: 'text' },
+    { senderId: 'current-user', text: "There's this hidden gem called Blue Bottle - amazing pour-overs ☕", type: 'text' },
+    { senderId: userId, text: "Oh I know that place! Their single origins are incredible", type: 'text' },
+    { senderId: 'current-user', text: "Yes! Maybe we could check it out together sometime?", type: 'text' }
+  ];
+
+  return baseMessages.map((msg, index) => ({
+    ...msg,
+    id: `msg-${index + 1}`,
+    timestamp: new Date(Date.now() - (baseMessages.length - index) * 300000) // 5 min intervals
+  }));
+};

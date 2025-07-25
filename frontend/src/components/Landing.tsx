@@ -30,7 +30,7 @@ const Landing: React.FC<LandingProps> = ({ onGetStarted }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#2AAC7A] via-[#2AAC7A]/80 to-[#6C5CE7] flex flex-col items-center justify-center p-6 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-500 via-emerald-400 to-purple-500 flex flex-col items-center justify-center p-6 text-white">
       <div className="text-center max-w-md mx-auto">
         <div className="mb-8">
           <h1 className="text-6xl font-bold mb-2 tracking-tight">n1</h1>
@@ -58,13 +58,16 @@ const Landing: React.FC<LandingProps> = ({ onGetStarted }) => {
 
         <button
           onClick={onGetStarted}
-          className="w-full bg-white text-[#2AAC7A] py-4 rounded-2xl font-bold text-lg hover:bg-gray-50 transform hover:scale-105 transition-all duration-300 shadow-xl"
+          className="w-full bg-white text-emerald-500 py-4 rounded-2xl font-bold text-lg hover:bg-gray-50 transform hover:scale-105 transition-all duration-300 shadow-xl"
         >
-          Get Started
+          Join now
         </button>
 
         <p className="text-sm opacity-70 mt-6">
-          Join thousands finding meaningful connections
+          Already have an account?{' '}
+          <a href="#" className="text-white font-semibold">
+            Log in
+          </a>
         </p>
       </div>
     </div>

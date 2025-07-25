@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Landing from './components/Landing';
 import MatchProfile from './components/MatchProfile';
 import TasteExplorer from './components/TasteExplorer';
+import ChatScreen from './components/ChatScreen';
 import VibeCheck from './components/VibeCheck';
 import DateIdeas from './components/DateIdeas';
 import Navigation from './components/Navigation';
@@ -19,7 +20,7 @@ function App() {
         return (
           <MatchProfile
             user={mockUsers[currentUserIndex]}
-            onNext={() => {
+            onLike={() => {
               if (currentUserIndex < mockUsers.length - 1) {
                 setCurrentUserIndex(currentUserIndex + 1);
               } else {
@@ -34,6 +35,20 @@ function App() {
         return <VibeCheck />;
       case 'dates':
         return <DateIdeas />;
+      case 'chat':
+        return selectedChatUser ? (
+          <ChatScreen
+            user={selectedChatUser}
+            onBack={() => {
+              setCurrentScreen('matching');
+              setSelectedChatUser(null);
+            }}
+          />
+        ) : (
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <p className="text-gray-500">No chat selected</p>
+          </div>
+        );
       case 'profile':
         return (
           <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6 pb-24">
