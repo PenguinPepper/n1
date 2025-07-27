@@ -57,7 +57,7 @@ const DateIdeas: React.FC = () => {
   };
 
   const DateIdeaCard: React.FC<{ idea: DateIdea }> = ({ idea }) => (
-    <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+    <div className="bg-white rounded-2xl p-6 pb-28 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <h3 className="font-bold text-gray-800 text-lg mb-2">{idea.title}</h3>

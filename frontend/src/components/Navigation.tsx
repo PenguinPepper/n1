@@ -16,19 +16,19 @@ const Navigation: React.FC<NavigationProps> = ({ activeScreen, onScreenChange })
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-200">
-      <div className="flex justify-around items-center py-2 px-4 max-w-md mx-auto">
+    <div className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-200 shadow-lg z-50">
+      <div className="flex justify-around items-center py-1 px-4 max-w-md mx-auto">
         {navItems.map(({ id, icon: Icon, label }) => (
           <button
             key={id}
             onClick={() => onScreenChange(id)}
-            className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all duration-200 ${
+            className={`flex flex-col items-center py-1 px-2 rounded-lg transition-all duration-200 ${
               activeScreen === id
                 ? 'text-[#2AAC7A] bg-[#2AAC7A]/10'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Icon size={20} className="mb-1" />
+            <Icon size={18} className="mb-1" />
             <span className="text-xs font-medium">{label}</span>
           </button>
         ))}
