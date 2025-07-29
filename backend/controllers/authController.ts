@@ -9,11 +9,16 @@ export const signUp = async (req: Request<{}, AuthResponse, SignUpRequest, ApiRe
     const errors = validationResult(req);
     
     if (!errors.isEmpty()) {
-      res.status(400);
+      res.status(400).json({ 
+        error: 'Validation failed',
+        errors: errors.array()
+      });
       return;
     }
 
     const { email, password } = req.body;
+
+    console.log('Attempting to sign up user:', email); // Debug log
 
     // Create user with Supabase Auth
     const { data, error } = await supabase.auth.signUp({
@@ -25,7 +30,23 @@ export const signUp = async (req: Request<{}, AuthResponse, SignUpRequest, ApiRe
     });
 
     if (error) {
-      res.status(400);
+      console.error('Supabase signup error:', error); // Debug log
+      res.status(400).json({ 
+        error: error.message || 'Failed to create user'
+      });
+      return;
+    }
+
+    // Check if user was created but needs email confirmation
+    if (data.user && !data.session) {
+      res.status(201).json({
+        message: 'User created successfully. Please check your email for confirmation.',
+        user: {
+          id: data.user.id,
+          email: data.user.email || ''
+        },
+        session: null
+      });
       return;
     }
 
@@ -39,7 +60,9 @@ export const signUp = async (req: Request<{}, AuthResponse, SignUpRequest, ApiRe
     });
   } catch (error) {
     console.error('Sign up error:', error);
-    res.status(500);
+    res.status(500).json({ 
+      error: 'Internal server error during sign up'
+    });
   }
 };
 
@@ -48,11 +71,16 @@ export const signIn = async (req: Request<{}, AuthResponse, SignInRequest>, res:
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      res.status(400);
+      res.status(400).json({ 
+        error: 'Validation failed',
+        errors: errors.array()
+      });
       return;
     }
 
     const { email, password } = req.body;
+
+    console.log('Attempting to sign in user:', email); // Debug log
 
     // Sign in with Supabase Auth
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -61,7 +89,34 @@ export const signIn = async (req: Request<{}, AuthResponse, SignInRequest>, res:
     });
 
     if (error) {
-      res.status(400);
+      console.error('Supabase signin error:', error); // Debug log
+      
+      // Handle specific error cases
+      if (error.message.includes('Invalid login credentials')) {
+        res.status(401).json({ 
+          error: 'Invalid email or password'
+        });
+        return;
+      }
+      
+      if (error.message.includes('Email not confirmed')) {
+        res.status(401).json({ 
+          error: 'Please confirm your email before signing in'
+        });
+        return;
+      }
+
+      res.status(400).json({ 
+        error: error.message || 'Failed to sign in'
+      });
+      return;
+    }
+
+    // Ensure we have both user and session
+    if (!data.user || !data.session) {
+      res.status(400).json({ 
+        error: 'Sign in failed - incomplete authentication data'
+      });
       return;
     }
 
@@ -75,7 +130,9 @@ export const signIn = async (req: Request<{}, AuthResponse, SignInRequest>, res:
     });
   } catch (error) {
     console.error('Sign in error:', error);
-    res.status(500);
+    res.status(500).json({ 
+      error: 'Internal server error during sign in'
+    });
   }
 };
 
@@ -84,6 +141,7 @@ export const signOut = async (req: Request, res: Response): Promise<void> => {
     const { error } = await supabase.auth.signOut();
     
     if (error) {
+      console.error('Supabase signout error:', error);
       res.status(400).json({ error: error.message });
       return;
     }
