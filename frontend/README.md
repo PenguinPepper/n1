@@ -1,69 +1,67 @@
-# React + TypeScript + Vite
+# n1 Dating App
+Where culture connection
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## �️ Built With
 
-Currently, two official plugins are available:
+### Frontend Technologies
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **[React 18](https://react.dev/)** - Component-based UI library with concurrent features
+- **[TypeScript](https://www.typescriptlang.org/)** - Type-safe JavaScript for better developer experience
+- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework for rapid styling
+- **[Lucide React](https://lucide.dev/)** - Beautiful & consistent icon library
 
-## Expanding the ESLint configuration
+## 📁 Frontend Folder Structure
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+frontend/
+├── src/                   # Source code for the React app
+│   ├── components/        # Reusable React components
+│   ├── types/             # Contains mock data
+│   ├── utlis/             # Main App component
+│   ├── api.ts             # Connects and communicates with backend
+|   ├── App.tsx            # Entry point for React
+|   ├── index.css
+|   ├── main.tsx   
+│   └── ...                # Other source files
+├── .eslintrc.js           # ESLint configuration
+├── index.html             # HTML template
+├── package.json           # Project metadata and scripts
+├── tsconfig.json          # TypeScript configuration
+└── vite.config.ts         # Vite configuration
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🚀 Getting Started (Frontend)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. **Clone repository**
+  ```bash
+  git clone <repository-url>
+  ```
+2. **Navigate to the frontend folder:**
+  ```bash
+  cd frontend
+  ```
+3. **Install dependencies:**
+  ```bash
+  npm install
+  ```
+4. **Start the development server:**
+  ```bash
+  npm run dev
+  ```
+5. **Build for production:**
+  ```bash
+  npm run build
+  ```
+6. **Preview the production build:**
+  ```bash
+  npm run preview
+  ```
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## ✨ Key Features
+
+- **React 18** with **TypeScript** for type-safe UI development
+- **Vite** for lightning-fast builds and hot module replacement (HMR)
+- **ESLint** with recommended and type-aware rules for code quality
+- Production-ready configuration out of the box
+- Easy integration with React-specific ESLint plugins
+
