@@ -17,6 +17,14 @@ export interface User {
     agreeableness: number;
     neuroticism: number;
   };
+  tastePreferences: {
+    movies: string[];
+    music: string[];
+    books: string[];
+    tvShows: string[];
+    genres: string[];
+    artists: string[];
+  };
 }
 
 export interface MatchInsight {

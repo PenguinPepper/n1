@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, Camera, Plus, X, ArrowRight } from 'lucide-react';
-import type { User as UserType} from '../types/index';
+import { profileAPI } from '../api';
+import type { User as UserType } from '../types/index';
 
 interface ProfileSetupProps {
   onProfileComplete: (user: UserType) => void;
@@ -8,12 +9,22 @@ interface ProfileSetupProps {
 
 const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     age: '',
     bio: '',
     interests: '',
     photo: '',
+    tastePreferences: {
+      movies: '',
+      music: '',
+      books: '',
+      tvShows: '',
+      genres: '',
+      artists: ''
+    },
     personality: {
       openness: 50,
       conscientiousness: 50,
@@ -23,7 +34,7 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
     }
   });
 
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
@@ -42,6 +53,15 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
     }));
   };
 
+  const handleTasteChange = (category: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tastePreferences: {
+        ...prev.tastePreferences,
+        [category]: value
+      }
+    }));
+  };
   const handleInterestAdd = (interest: string) => {
     if (interest.trim() && !formData.interests.split(',').map(i => i.trim()).includes(interest.trim())) {
       const newInterests = formData.interests ? `${formData.interests}, ${interest.trim()}` : interest.trim();
@@ -64,6 +84,9 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
         return formData.interests.trim().length > 0;
       case 4:
         return formData.photo.trim().length > 0;
+      case 5:
+        const { movies, music, books } = formData.tastePreferences;
+        return movies.trim().length > 0 || music.trim().length > 0 || books.trim().length > 0;
       default:
         return false;
     }
@@ -78,6 +101,81 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
   };
 
   const handleComplete = () => {
+    handleSubmitProfile();
+  };
+
+   const handleSubmitProfile = async () => {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      // Prepare the profile data for the API
+      const profileData = {
+        name: formData.name,
+        age: parseInt(formData.age),
+        bio: formData.bio,
+        photos: formData.photo ? [formData.photo] : [],
+        interests: formData.interests.split(',').map(i => i.trim()).filter(i => i),
+        personality: formData.personality,
+        tastePreferences: {
+          movies: formData.tastePreferences.movies.split(',').map(item => item.trim()).filter(item => item),
+          music: formData.tastePreferences.music.split(',').map(item => item.trim()).filter(item => item),
+          books: formData.tastePreferences.books.split(',').map(item => item.trim()).filter(item => item),
+          tvShows: formData.tastePreferences.tvShows.split(',').map(item => item.trim()).filter(item => item),
+          genres: formData.tastePreferences.genres.split(',').map(item => item.trim()).filter(item => item),
+          artists: formData.tastePreferences.artists.split(',').map(item => item.trim()).filter(item => item)
+        }
+      };
+
+      // Call the API to create the profile
+      const response = await profileAPI.createProfile(profileData);
+      
+      if (response.profile) {
+        // Convert the API response to the User format expected by the frontend
+        const user: UserType = {
+          id: response.profile.id,
+          name: response.profile.name,
+          age: response.profile.age,
+          photos: response.profile.photos,
+          bio: response.profile.bio,
+          interests: response.profile.interests,
+          personality: response.profile.personality,
+          tastePreferences: response.profile.tastePreferences
+        };
+        
+        onProfileComplete(user);
+      } else {
+        throw new Error('Profile creation failed - no profile data returned');
+      }
+    } catch (err: any) {
+      console.error('Profile creation error:', err);
+      
+      // Handle different types of errors
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else if (err.response?.data?.errors) {
+        // Handle validation errors
+        const validationErrors = err.response.data.errors.map((e: any) => e.msg).join(', ');
+        setError(`Validation errors: ${validationErrors}`);
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  const handleCompleteOriginal = () => {
+    const tastePreferences = {
+      movies: formData.tastePreferences.movies.split(',').map(item => item.trim()).filter(item => item),
+      music: formData.tastePreferences.music.split(',').map(item => item.trim()).filter(item => item),
+      books: formData.tastePreferences.books.split(',').map(item => item.trim()).filter(item => item),
+      tvShows: formData.tastePreferences.tvShows.split(',').map(item => item.trim()).filter(item => item),
+      genres: formData.tastePreferences.genres.split(',').map(item => item.trim()).filter(item => item),
+      artists: formData.tastePreferences.artists.split(',').map(item => item.trim()).filter(item => item)
+    };
+
     const user: UserType = {
       id: 'current-user',
       name: formData.name,
@@ -85,7 +183,8 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
       photos: [formData.photo],
       bio: formData.bio,
       interests: formData.interests.split(',').map(i => i.trim()).filter(i => i),
-      personality: formData.personality
+      personality: formData.personality,
+      tastePreferences: tastePreferences
     };
     onProfileComplete(user);
   };
@@ -333,13 +432,129 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
           </div>
         );
 
+      case 5:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-gradient-to-r from-[#FF6B6B] to-[#6C5CE7] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🎭</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Your Taste Profile</h2>
+              <p className="text-gray-600">Help us understand your cultural preferences</p>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Favorite Movies
+                </label>
+                <textarea
+                  value={formData.tastePreferences.movies}
+                  onChange={(e) => handleTasteChange('movies', e.target.value)}
+                  placeholder="e.g., Blade Runner 2049, The Grand Budapest Hotel, Parasite"
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2AAC7A] focus:border-transparent resize-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">Separate with commas</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Music & Artists
+                </label>
+                <textarea
+                  value={formData.tastePreferences.music}
+                  onChange={(e) => handleTasteChange('music', e.target.value)}
+                  placeholder="e.g., Tame Impala, Radiohead, Frank Ocean, Billie Eilish"
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2AAC7A] focus:border-transparent resize-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">Artists, bands, or songs you love</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Favorite Books
+                </label>
+                <textarea
+                  value={formData.tastePreferences.books}
+                  onChange={(e) => handleTasteChange('books', e.target.value)}
+                  placeholder="e.g., Norwegian Wood, The Midnight Library, Dune"
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2AAC7A] focus:border-transparent resize-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">Books that shaped your perspective</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  TV Shows & Series
+                </label>
+                <textarea
+                  value={formData.tastePreferences.tvShows}
+                  onChange={(e) => handleTasteChange('tvShows', e.target.value)}
+                  placeholder="e.g., Breaking Bad, The Office, Stranger Things, Black Mirror"
+                  rows={2}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2AAC7A] focus:border-transparent resize-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">Shows you binge-watch</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Favorite Genres
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.tastePreferences.genres}
+                    onChange={(e) => handleTasteChange('genres', e.target.value)}
+                    placeholder="Sci-fi, Romance, Thriller"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2AAC7A] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Favorite Artists
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.tastePreferences.artists}
+                    onChange={(e) => handleTasteChange('artists', e.target.value)}
+                    placeholder="Painters, Musicians, etc."
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2AAC7A] focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-[#2AAC7A]/10 rounded-xl p-4">
+                <h4 className="font-semibold text-gray-800 mb-2">💡 Why we ask</h4>
+                <p className="text-sm text-gray-600">
+                  Your taste preferences help us find people who share your cultural interests and suggest perfect date ideas based on what you both love.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
   };
 
+  const getStepGradient = () => {
+    switch (currentStep) {
+      case 1: return 'from-blue-50 to-purple-50';
+      case 2: return 'from-orange-50 to-pink-50';
+      case 3: return 'from-purple-50 to-pink-50';
+      case 4: return 'from-green-50 to-blue-50';
+      case 5: return 'from-pink-50 to-purple-50';
+      default: return 'from-blue-50 to-purple-50';
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+    <div className={`min-h-screen bg-gradient-to-br ${getStepGradient()} pt-16 pb-6`}>
       <div className="max-w-md mx-auto">
         {/* Progress bar */}
         <div className="mb-8">
@@ -358,6 +573,13 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
         {/* Step content */}
         <div className="bg-white rounded-2xl p-6 shadow-lg mb-8">
           {renderStep()}
+          
+          {/* Error display */}
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
         </div>
 
         {/* Navigation buttons */}
@@ -373,11 +595,20 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
           
           <button
             onClick={handleNext}
-            disabled={!canProceed()}
+            disabled={!canProceed() || isSubmitting}
             className="flex-1 py-3 bg-gradient-to-r from-[#2AAC7A] to-[#6C5CE7] text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
           >
-            <span>{currentStep === totalSteps ? 'Complete Profile' : 'Next'}</span>
-            <ArrowRight size={20} />
+            {isSubmitting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Creating Profile...</span>
+              </>
+            ) : (
+              <>
+                <span>{currentStep === totalSteps ? 'Complete Profile' : 'Next'}</span>
+                <ArrowRight size={20} />
+              </>
+            )}
           </button>
         </div>
       </div>

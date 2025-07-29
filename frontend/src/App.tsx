@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AuthScreen from './components/AuthScreen';
 import Landing from './components/Landing';
 import ProfileSetup from './components/ProfileSetup';
 import MatchProfile from './components/MatchProfile';
@@ -11,15 +12,42 @@ import { mockUsers } from './utils/mockData';
 import type { User } from './types';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return !!localStorage.getItem('authToken');
+  });
   const [currentScreen, setCurrentScreen] = useState<string>('landing');
   const [currentUserIndex, setCurrentUserIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedChatUser, setSelectedChatUser] = useState<User | null>(null);
 
+  const handleAuthSuccess = (token:string) => {
+    setIsAuthenticated(true);
+    localStorage.setItem('authToken', token);
+    setCurrentScreen('profileSetup');
+  }
+
+  const handleSignOut = () => {
+    localStorage.removeItem('authToken');
+    setIsAuthenticated(false);
+    setCurrentScreen('landing');
+    setCurrentUser(null);
+  };
+
   const renderScreen = () => {
+    if (!isAuthenticated && ['profileSetup', 'matching', 'taste', 'vibe', 'dates', 'chat', 'profile'].includes(currentScreen)){
+      return <AuthScreen onAuthSuccess={handleAuthSuccess} />;
+    }
     switch (currentScreen) {
       case 'landing':
-        return <Landing onGetStarted={() => setCurrentScreen('profileSetup')} />;
+        return <Landing onGetStarted={() => {
+          if (isAuthenticated) {
+            setCurrentScreen('profileSetup');
+          } else {
+            setCurrentScreen('auth');
+          }
+        }} />;
+      case 'auth':
+        return <AuthScreen onAuthSuccess={handleAuthSuccess} />;
       case 'profileSetup':
         return (
           <ProfileSetup
@@ -98,7 +126,13 @@ function App() {
                     ))}
                   </div>
                   <button
-                    onClick={() => setCurrentScreen('profileSetup')}
+                    onClick={() => {
+                      if (isAuthenticated) {
+                        setCurrentScreen('profileSetup');
+                      } else {
+                        setCurrentScreen('auth');
+                      }
+                    }}
                     className="px-6 py-2 bg-gradient-to-r from-[#2AAC7A] to-[#6C5CE7] text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300"
                   >
                     Edit Profile
@@ -109,7 +143,13 @@ function App() {
                   <h2 className="text-2xl font-bold text-gray-800 mb-2">Your Profile</h2>
                   <p className="text-gray-600 mb-4">Complete your profile setup to get started!</p>
                   <button
-                    onClick={() => setCurrentScreen('profileSetup')}
+                    onClick={() => {
+                      if (isAuthenticated) {
+                        setCurrentScreen('profileSetup');
+                      } else {
+                        setCurrentScreen('auth');
+                      }
+                    }}
                     className="px-6 py-2 bg-gradient-to-r from-[#2AAC7A] to-[#6C5CE7] text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300"
                   >
                     Setup Profile
@@ -127,7 +167,7 @@ function App() {
   return (
     <div className="min-h-screen">
       {renderScreen()}
-      {currentScreen !== 'landing' && (
+      {currentScreen !== 'landing' && currentScreen !== 'auth' && isAuthenticated && (
         <Navigation
           activeScreen={currentScreen}
           onScreenChange={setCurrentScreen}
