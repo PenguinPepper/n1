@@ -103,6 +103,25 @@ export interface GetProfilesQuery {
   maxAge?: string;
 }
 
+// AI Bio Generation interfaces
+export interface GenerateBioRequest {
+  interests?: string[];
+  personality?: PersonalityTraits;
+  tastePreferences?: {
+    movies?: string[];
+    music?: string[];
+    books?: string[];
+    tvShows?: string[];
+    genres?: string[];
+    artists?: string[];
+  };
+  currentBio?: string;
+}
+
+export interface GenerateBioResponse extends ApiResponse {
+  bio?: string;
+}
+
 // Extend Express Request interface to include user
 declare global {
   namespace Express {

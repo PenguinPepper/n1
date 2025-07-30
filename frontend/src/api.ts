@@ -142,6 +142,29 @@ export const profileAPI = {
     const response = await api.get('/profiles', { params });
     return response.data;
   },
+  
+generateBio: async (bioData: {
+    interests?: string[];
+    personality?: {
+      openness: number;
+      conscientiousness: number;
+      extraversion: number;
+      agreeableness: number;
+      neuroticism: number;
+    };
+    tastePreferences?: {
+      movies: string[];
+      music: string[];
+      books: string[];
+      tvShows: string[];
+      genres: string[];
+      artists: string[];
+    };
+    currentBio?: string;
+  }) => {
+    const response = await api.post('/profiles/generate-bio', bioData);
+    return response.data;
+  },
 };
 
 export default api;

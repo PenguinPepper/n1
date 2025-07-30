@@ -4,7 +4,8 @@ import {
   getProfile,
   updateProfile,
   deleteProfile,
-  getProfiles
+  getProfiles,
+  generateBio
 } from '../controllers/profileController';
 import { authenticateUser } from '../middleware/auth';
 import { createProfileValidation, updateProfileValidation } from '../validators/profileValidator';
@@ -31,5 +32,8 @@ router.delete('/me', deleteProfile);
 
 // GET /api/profiles - Get profiles for matching (with filters)
 router.get('/', getProfiles);
+
+// POST /api/profiles/generate-bio - Generate AI bio
+router.post('/generate-bio', generateBio);
 
 export default router;
