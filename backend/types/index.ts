@@ -136,6 +136,24 @@ declare global {
   }
 }
 
+export interface TasteNuance {
+  category: string;
+  sharedItems: string[];
+  description: string;
+  nuanceLevel: 'surface' | 'deep' | 'profound';
+  examples: string[];
+}
+
+export interface ProcessMatchRequest {
+  targetUserId: string;
+}
+
+export interface MatchProcessResponse extends ApiResponse {
+  isMatch: boolean;
+  tasteNuances?: TasteNuance[];
+  compatibilityScore?: number;
+}
+
 // API Response interfaces
 export interface ApiResponse<T = any> {
   message?: string;

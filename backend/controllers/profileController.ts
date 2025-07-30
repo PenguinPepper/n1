@@ -9,6 +9,9 @@ import {
   ProfilesResponse,
   GenerateBioRequest,
   GenerateBioResponse,
+  ProcessMatchRequest,
+  MatchProcessResponse,
+  TasteNuance,
   DatabaseProfile,
   Profile
 } from '../types';
@@ -508,4 +511,467 @@ const generateCasualBio = (interests: string[] = [], tastePreferences: any = {})
   bio += "What's your go-to comfort show when you need to unwind?";
   
   return bio;
+};
+
+export const processMatch = async (
+  req: Request<{}, MatchProcessResponse, ProcessMatchRequest>, 
+  res: Response<MatchProcessResponse>
+): Promise<void> => {
+  try {
+    const currentUserId = req.user?.id;
+    if (!currentUserId) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const { targetUserId } = req.body;
+    if (!targetUserId) {
+      res.status(400).json({ error: 'Target user ID is required' });
+      return;
+    }
+
+    // Fetch both user profiles
+    const [currentUserResult, targetUserResult] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', currentUserId).single(),
+      supabase.from('profiles').select('*').eq('id', targetUserId).single()
+    ]);
+
+    if (currentUserResult.error || targetUserResult.error) {
+      res.status(404).json({ error: 'One or both user profiles not found' });
+      return;
+    }
+
+    const currentUser = currentUserResult.data as DatabaseProfile;
+    const targetUser = targetUserResult.data as DatabaseProfile;
+
+    // Generate taste nuances
+    const tasteNuances = generateTasteNuances(currentUser, targetUser);
+    
+    // Calculate compatibility score
+    const compatibilityScore = calculateCompatibilityScore(currentUser, targetUser);
+
+    // For now, assume all likes result in matches (in production, you'd check mutual likes)
+    const isMatch = true;
+
+    res.json({
+      message: 'Match processed successfully',
+      isMatch,
+      tasteNuances,
+      compatibilityScore
+    });
+  } catch (error) {
+    console.error('Process match error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Helper function to generate taste nuances
+const generateTasteNuances = (user1: DatabaseProfile, user2: DatabaseProfile): TasteNuance[] => {
+  const nuances: TasteNuance[] = [];
+
+  // Analyze movie preferences
+  const movieNuance = analyzeMovieTastes(user1, user2);
+  if (movieNuance) nuances.push(movieNuance);
+
+  // Analyze music preferences
+  const musicNuance = analyzeMusicTastes(user1, user2);
+  if (musicNuance) nuances.push(musicNuance);
+
+  // Analyze book preferences
+  const bookNuance = analyzeBookTastes(user1, user2);
+  if (bookNuance) nuances.push(bookNuance);
+
+  // Analyze general interests
+  const interestNuance = analyzeGeneralInterests(user1, user2);
+  if (interestNuance) nuances.push(interestNuance);
+
+  // Analyze personality compatibility
+  const personalityNuance = analyzePersonalityCompatibility(user1, user2);
+  if (personalityNuance) nuances.push(personalityNuance);
+
+  return nuances;
+};
+
+// Movie taste analysis
+const analyzeMovieTastes = (user1: DatabaseProfile, user2: DatabaseProfile): TasteNuance | null => {
+  const user1Movies = user1.taste_preferences?.movies || [];
+  const user2Movies = user2.taste_preferences?.movies || [];
+  
+  if (user1Movies.length === 0 || user2Movies.length === 0) return null;
+
+  const sharedMovies = user1Movies.filter(movie => 
+    user2Movies.some(otherMovie => 
+      movie.toLowerCase().includes(otherMovie.toLowerCase()) || 
+      otherMovie.toLowerCase().includes(movie.toLowerCase())
+    )
+  );
+
+  if (sharedMovies.length === 0) {
+    // Look for genre similarities
+    const cinematicStyles = analyzeCinematicStyles(user1Movies, user2Movies);
+    if (cinematicStyles.length > 0) {
+      return {
+        category: 'Cinematic Sensibilities',
+        sharedItems: cinematicStyles,
+        description: `You both gravitate toward ${cinematicStyles.join(' and ')} storytelling, suggesting a shared appreciation for nuanced filmmaking.`,
+        nuanceLevel: 'deep',
+        examples: [`Your taste for ${user1Movies[0]} and their love of ${user2Movies[0]} both reflect this aesthetic.`]
+      };
+    }
+    return null;
+  }
+
+  const nuanceLevel = sharedMovies.length >= 3 ? 'profound' : sharedMovies.length >= 2 ? 'deep' : 'surface';
+  
+  return {
+    category: 'Film Appreciation',
+    sharedItems: sharedMovies,
+    description: generateMovieDescription(sharedMovies, nuanceLevel),
+    nuanceLevel,
+    examples: generateMovieExamples(sharedMovies, user1Movies, user2Movies)
+  };
+};
+
+// Music taste analysis
+const analyzeMusicTastes = (user1: DatabaseProfile, user2: DatabaseProfile): TasteNuance | null => {
+  const user1Music = user1.taste_preferences?.music || [];
+  const user2Music = user2.taste_preferences?.music || [];
+  
+  if (user1Music.length === 0 || user2Music.length === 0) return null;
+
+  const sharedMusic = user1Music.filter(artist => 
+    user2Music.some(otherArtist => 
+      artist.toLowerCase().includes(otherArtist.toLowerCase()) || 
+      otherArtist.toLowerCase().includes(artist.toLowerCase())
+    )
+  );
+
+  if (sharedMusic.length === 0) {
+    // Analyze musical styles and genres
+    const musicalStyles = analyzeMusicalStyles(user1Music, user2Music);
+    if (musicalStyles.length > 0) {
+      return {
+        category: 'Musical Wavelength',
+        sharedItems: musicalStyles,
+        description: `Your musical tastes align in the ${musicalStyles.join(' and ')} spectrum, indicating a shared sonic sensibility.`,
+        nuanceLevel: 'deep',
+        examples: [`The atmospheric quality in your favorite artists suggests you both appreciate layered, emotive soundscapes.`]
+      };
+    }
+    return null;
+  }
+
+  const nuanceLevel = sharedMusic.length >= 3 ? 'profound' : sharedMusic.length >= 2 ? 'deep' : 'surface';
+  
+  return {
+    category: 'Musical Connection',
+    sharedItems: sharedMusic,
+    description: generateMusicDescription(sharedMusic, nuanceLevel),
+    nuanceLevel,
+    examples: generateMusicExamples(sharedMusic, user1Music, user2Music)
+  };
+};
+
+// Book taste analysis
+const analyzeBookTastes = (user1: DatabaseProfile, user2: DatabaseProfile): TasteNuance | null => {
+  const user1Books = user1.taste_preferences?.books || [];
+  const user2Books = user2.taste_preferences?.books || [];
+  
+  if (user1Books.length === 0 || user2Books.length === 0) return null;
+
+  const sharedBooks = user1Books.filter(book => 
+    user2Books.some(otherBook => 
+      book.toLowerCase().includes(otherBook.toLowerCase()) || 
+      otherBook.toLowerCase().includes(book.toLowerCase())
+    )
+  );
+
+  if (sharedBooks.length === 0) {
+    // Analyze literary themes and styles
+    const literaryThemes = analyzeLiteraryThemes(user1Books, user2Books);
+    if (literaryThemes.length > 0) {
+      return {
+        category: 'Literary Resonance',
+        sharedItems: literaryThemes,
+        description: `You both are drawn to ${literaryThemes.join(' and ')} narratives, suggesting aligned intellectual curiosities.`,
+        nuanceLevel: 'deep',
+        examples: [`Your reading choices reflect a shared appreciation for thought-provoking storytelling.`]
+      };
+    }
+    return null;
+  }
+
+  const nuanceLevel = sharedBooks.length >= 3 ? 'profound' : sharedBooks.length >= 2 ? 'deep' : 'surface';
+  
+  return {
+    category: 'Literary Kinship',
+    sharedItems: sharedBooks,
+    description: generateBookDescription(sharedBooks, nuanceLevel),
+    nuanceLevel,
+    examples: generateBookExamples(sharedBooks, user1Books, user2Books)
+  };
+};
+
+// General interests analysis
+const analyzeGeneralInterests = (user1: DatabaseProfile, user2: DatabaseProfile): TasteNuance | null => {
+  const user1Interests = user1.interests || [];
+  const user2Interests = user2.interests || [];
+  
+  if (user1Interests.length === 0 || user2Interests.length === 0) return null;
+
+  const sharedInterests = user1Interests.filter(interest => 
+    user2Interests.some(otherInterest => 
+      interest.toLowerCase() === otherInterest.toLowerCase()
+    )
+  );
+
+  if (sharedInterests.length === 0) return null;
+
+  const nuanceLevel = sharedInterests.length >= 4 ? 'profound' : sharedInterests.length >= 2 ? 'deep' : 'surface';
+  
+  return {
+    category: 'Lifestyle Harmony',
+    sharedItems: sharedInterests,
+    description: generateInterestDescription(sharedInterests, nuanceLevel),
+    nuanceLevel,
+    examples: [`Your mutual love for ${sharedInterests.slice(0, 2).join(' and ')} suggests compatible ways of spending time together.`]
+  };
+};
+
+// Personality compatibility analysis
+const analyzePersonalityCompatibility = (user1: DatabaseProfile, user2: DatabaseProfile): TasteNuance | null => {
+  const p1 = user1.personality || {};
+  const p2 = user2.personality || {};
+  
+  if (Object.keys(p1).length === 0 || Object.keys(p2).length === 0) return null;
+
+  const compatibleTraits: string[] = [];
+  const insights: string[] = [];
+
+  // Analyze openness compatibility
+  if (Math.abs((p1.openness || 50) - (p2.openness || 50)) <= 20) {
+    compatibleTraits.push('Openness to Experience');
+    insights.push('You both share a similar appetite for new experiences and creative exploration.');
+  }
+
+  // Analyze extraversion compatibility
+  if (Math.abs((p1.extraversion || 50) - (p2.extraversion || 50)) <= 25) {
+    compatibleTraits.push('Social Energy');
+    insights.push('Your social energy levels are well-matched, suggesting comfortable interaction dynamics.');
+  }
+
+  // Analyze agreeableness compatibility
+  if (Math.abs((p1.agreeableness || 50) - (p2.agreeableness || 50)) <= 20) {
+    compatibleTraits.push('Interpersonal Harmony');
+    insights.push('You both value cooperation and understanding in relationships.');
+  }
+
+  if (compatibleTraits.length === 0) return null;
+
+  return {
+    category: 'Personality Synergy',
+    sharedItems: compatibleTraits,
+    description: `Your personalities complement each other across ${compatibleTraits.length} key dimensions.`,
+    nuanceLevel: compatibleTraits.length >= 3 ? 'profound' : 'deep',
+    examples: insights
+  };
+};
+
+// Helper functions for style analysis
+const analyzeCinematicStyles = (movies1: string[], movies2: string[]): string[] => {
+  const styles: string[] = [];
+  
+  // Check for indie/arthouse preferences
+  const indieKeywords = ['wes anderson', 'charlie kaufman', 'denis villeneuve', 'christopher nolan', 'greta gerwig'];
+  if (movies1.some(m => indieKeywords.some(k => m.toLowerCase().includes(k))) &&
+      movies2.some(m => indieKeywords.some(k => m.toLowerCase().includes(k)))) {
+    styles.push('auteur-driven');
+  }
+  
+  // Check for sci-fi preferences
+  const scifiKeywords = ['blade runner', 'matrix', 'interstellar', 'arrival', 'ex machina'];
+  if (movies1.some(m => scifiKeywords.some(k => m.toLowerCase().includes(k))) &&
+      movies2.some(m => scifiKeywords.some(k => m.toLowerCase().includes(k)))) {
+    styles.push('cerebral sci-fi');
+  }
+  
+  return styles;
+};
+
+const analyzeMusicalStyles = (music1: string[], music2: string[]): string[] => {
+  const styles: string[] = [];
+  
+  // Check for indie preferences
+  const indieKeywords = ['tame impala', 'radiohead', 'arctic monkeys', 'the strokes', 'vampire weekend'];
+  if (music1.some(m => indieKeywords.some(k => m.toLowerCase().includes(k))) &&
+      music2.some(m => indieKeywords.some(k => m.toLowerCase().includes(k)))) {
+    styles.push('indie/alternative');
+  }
+  
+  // Check for electronic preferences
+  const electronicKeywords = ['aphex twin', 'boards of canada', 'burial', 'four tet', 'bonobo'];
+  if (music1.some(m => electronicKeywords.some(k => m.toLowerCase().includes(k))) &&
+      music2.some(m => electronicKeywords.some(k => m.toLowerCase().includes(k)))) {
+    styles.push('atmospheric electronic');
+  }
+  
+  return styles;
+};
+
+const analyzeLiteraryThemes = (books1: string[], books2: string[]): string[] => {
+  const themes: string[] = [];
+  
+  // Check for literary fiction
+  const literaryKeywords = ['murakami', 'kafka', 'borges', 'calvino', 'atwood'];
+  if (books1.some(b => literaryKeywords.some(k => b.toLowerCase().includes(k))) &&
+      books2.some(b => literaryKeywords.some(k => b.toLowerCase().includes(k)))) {
+    themes.push('literary fiction');
+  }
+  
+  // Check for philosophical themes
+  const philKeywords = ['camus', 'sartre', 'hesse', 'dostoyevsky', 'nietzsche'];
+  if (books1.some(b => philKeywords.some(k => b.toLowerCase().includes(k))) &&
+      books2.some(b => philKeywords.some(k => b.toLowerCase().includes(k)))) {
+    themes.push('philosophical exploration');
+  }
+  
+  return themes;
+};
+
+// Description generators
+const generateMovieDescription = (sharedMovies: string[], level: string): string => {
+  if (level === 'profound') {
+    return `Your film tastes reveal a profound connection - you both appreciate ${sharedMovies.slice(0, 2).join(' and ')} among others, suggesting you share sophisticated cinematic sensibilities and likely enjoy deep post-movie discussions.`;
+  } else if (level === 'deep') {
+    return `You have overlapping film appreciation with shared love for ${sharedMovies[0]}, indicating compatible storytelling preferences and similar emotional responses to cinema.`;
+  } else {
+    return `You both enjoy ${sharedMovies[0]}, which suggests some alignment in your entertainment preferences.`;
+  }
+};
+
+const generateMusicDescription = (sharedMusic: string[], level: string): string => {
+  if (level === 'profound') {
+    return `Your musical connection runs deep - sharing artists like ${sharedMusic.slice(0, 2).join(' and ')} suggests you're on the same emotional wavelength and likely have similar ways of processing feelings through sound.`;
+  } else if (level === 'deep') {
+    return `You both resonate with ${sharedMusic[0]}, indicating aligned musical sensibilities and possibly similar moods and energy levels.`;
+  } else {
+    return `Your mutual appreciation for ${sharedMusic[0]} shows some common ground in musical taste.`;
+  }
+};
+
+const generateBookDescription = (sharedBooks: string[], level: string): string => {
+  if (level === 'profound') {
+    return `Your literary connection is remarkable - both drawn to works like ${sharedBooks.slice(0, 2).join(' and ')}, suggesting you share intellectual curiosities and similar ways of processing complex ideas.`;
+  } else if (level === 'deep') {
+    return `You both connect with ${sharedBooks[0]}, indicating compatible intellectual interests and possibly similar life philosophies.`;
+  } else {
+    return `Your shared appreciation for ${sharedBooks[0]} suggests some alignment in reading preferences.`;
+  }
+};
+
+const generateInterestDescription = (sharedInterests: string[], level: string): string => {
+  if (level === 'profound') {
+    return `Your lifestyle compatibility is striking - sharing interests in ${sharedInterests.slice(0, 3).join(', ')} suggests you'd naturally enjoy spending time together and have built-in conversation topics.`;
+  } else if (level === 'deep') {
+    return `You both are passionate about ${sharedInterests.slice(0, 2).join(' and ')}, indicating compatible ways of spending free time and shared values.`;
+  } else {
+    return `Your mutual interest in ${sharedInterests[0]} provides a natural connection point.`;
+  }
+};
+
+const generateMovieExamples = (shared: string[], user1Movies: string[], user2Movies: string[]): string[] => {
+  return [`The fact that you both appreciate ${shared[0]} suggests you value ${getMovieQuality(shared[0])} in storytelling.`];
+};
+
+const generateMusicExamples = (shared: string[], user1Music: string[], user2Music: string[]): string[] => {
+  return [`Your shared love for ${shared[0]} indicates you both appreciate ${getMusicQuality(shared[0])} in music.`];
+};
+
+const generateBookExamples = (shared: string[], user1Books: string[], user2Books: string[]): string[] => {
+  return [`Both being drawn to ${shared[0]} suggests you value ${getBookQuality(shared[0])} in literature.`];
+};
+
+const getMovieQuality = (movie: string): string => {
+  const qualities = ['complex narratives', 'visual storytelling', 'emotional depth', 'innovative cinematography'];
+  return qualities[Math.floor(Math.random() * qualities.length)];
+};
+
+const getMusicQuality = (artist: string): string => {
+  const qualities = ['atmospheric soundscapes', 'emotional authenticity', 'innovative production', 'lyrical depth'];
+  return qualities[Math.floor(Math.random() * qualities.length)];
+};
+
+const getBookQuality = (book: string): string => {
+  const qualities = ['psychological complexity', 'philosophical depth', 'narrative innovation', 'emotional resonance'];
+  return qualities[Math.floor(Math.random() * qualities.length)];
+};
+
+// Calculate overall compatibility score
+const calculateCompatibilityScore = (user1: DatabaseProfile, user2: DatabaseProfile): number => {
+  let score = 0;
+  let factors = 0;
+
+  // Interest compatibility (25% weight)
+  const sharedInterests = (user1.interests || []).filter(interest => 
+    (user2.interests || []).includes(interest)
+  ).length;
+  const totalInterests = Math.max((user1.interests || []).length, (user2.interests || []).length);
+  if (totalInterests > 0) {
+    score += (sharedInterests / totalInterests) * 25;
+    factors++;
+  }
+
+  // Taste preferences compatibility (50% weight)
+  const tasteScore = calculateTasteCompatibility(user1.taste_preferences || {}, user2.taste_preferences || {});
+  score += tasteScore * 50;
+  factors++;
+
+  // Personality compatibility (25% weight)
+  const personalityScore = calculatePersonalityCompatibility(user1.personality || {}, user2.personality || {});
+  score += personalityScore * 25;
+  factors++;
+
+  return Math.round(score / factors);
+};
+
+const calculateTasteCompatibility = (taste1: any, taste2: any): number => {
+  let compatibility = 0;
+  let categories = 0;
+
+  ['movies', 'music', 'books', 'tvShows'].forEach(category => {
+    const items1 = taste1[category] || [];
+    const items2 = taste2[category] || [];
+    
+    if (items1.length > 0 && items2.length > 0) {
+      const shared = items1.filter((item: string) => 
+        items2.some((other: string) => 
+          item.toLowerCase().includes(other.toLowerCase()) || 
+          other.toLowerCase().includes(item.toLowerCase())
+        )
+      ).length;
+      
+      const total = Math.max(items1.length, items2.length);
+      compatibility += shared / total;
+      categories++;
+    }
+  });
+
+  return categories > 0 ? compatibility / categories : 0;
+};
+
+const calculatePersonalityCompatibility = (p1: any, p2: any): number => {
+  const traits = ['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism'];
+  let compatibility = 0;
+  let validTraits = 0;
+
+  traits.forEach(trait => {
+    if (p1[trait] !== undefined && p2[trait] !== undefined) {
+      const difference = Math.abs(p1[trait] - p2[trait]);
+      const traitCompatibility = Math.max(0, (100 - difference) / 100);
+      compatibility += traitCompatibility;
+      validTraits++;
+    }
+  });
+
+  return validTraits > 0 ? compatibility / validTraits : 0;
 };
