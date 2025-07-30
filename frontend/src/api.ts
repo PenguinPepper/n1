@@ -60,111 +60,41 @@ export const authAPI = {
 
 // Profile API calls
 export const profileAPI = {
-  createProfile: async (profileData: {
-    name: string;
-    age: number;
-    bio?: string;
-    photos?: string[];
-    interests?: string[];
-    personality?: {
-      openness: number;
-      conscientiousness: number;
-      extraversion: number;
-      agreeableness: number;
-      neuroticism: number;
-    };
-    tastePreferences?: {
-      movies: string[];
-      music: string[];
-      books: string[];
-      tvShows: string[];
-      genres: string[];
-      artists: string[];
-    };
-    currentVibe?: {
-      content: string;
-      type: 'song' | 'movie' | 'book' | 'show';
-      timestamp: Date;
-    };
-  }) => {
+  // Get current user's profile
+  getProfile: async () => {
+    const response = await api.get('/profiles/me');
+    return response.data;
+  },
+
+  // Create new profile
+  createProfile: async (profileData: any) => {
     const response = await api.post('/profiles', profileData);
     return response.data;
   },
 
-  getProfile: async (userId?: string) => {
-    const endpoint = userId ? `/profiles/${userId}` : '/profiles/me';
-    const response = await api.get(endpoint);
-    return response.data;
-  },
-
-  updateProfile: async (profileData: Partial<{
-    name: string;
-    age: number;
-    bio: string;
-    photos: string[];
-    interests: string[];
-    personality: {
-      openness: number;
-      conscientiousness: number;
-      extraversion: number;
-      agreeableness: number;
-      neuroticism: number;
-    };
-    tastePreferences: {
-      movies: string[];
-      music: string[];
-      books: string[];
-      tvShows: string[];
-      genres: string[];
-      artists: string[];
-    };
-    currentVibe: {
-      content: string;
-      type: 'song' | 'movie' | 'book' | 'show';
-      timestamp: Date;
-    };
-  }>) => {
+  // Update current user's profile
+  updateProfile: async (profileData: any) => {
     const response = await api.put('/profiles/me', profileData);
     return response.data;
   },
 
+  // Delete current user's profile
   deleteProfile: async () => {
     const response = await api.delete('/profiles/me');
     return response.data;
   },
 
-  getProfiles: async (params?: {
-    limit?: number;
-    offset?: number;
-    minAge?: number;
-    maxAge?: number;
-  }) => {
-    const response = await api.get('/profiles', { params });
+  // Get profiles for matching
+  getProfiles: async (query: any = {}) => {
+    const response = await api.get('/profiles', { params: query });
     return response.data;
   },
-  
-generateBio: async (bioData: {
-    interests?: string[];
-    personality?: {
-      openness: number;
-      conscientiousness: number;
-      extraversion: number;
-      agreeableness: number;
-      neuroticism: number;
-    };
-    tastePreferences?: {
-      movies: string[];
-      music: string[];
-      books: string[];
-      tvShows: string[];
-      genres: string[];
-      artists: string[];
-    };
-    currentBio?: string;
-  }) => {
+
+  // Generate AI bio
+  generateBio: async (bioData: any) => {
     const response = await api.post('/profiles/generate-bio', bioData);
     return response.data;
-  },
+  }
 };
 
 export default api;

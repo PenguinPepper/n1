@@ -12,12 +12,15 @@ interface MatchProfileProps {
 const MatchProfile: React.FC<MatchProfileProps> = ({ user, onPass, onStartChatting }) => {
   const [showInsights, setShowInsights] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [isProcessingMatch, setIsProcessingMatch] = useState(false);
   const insights = generateMatchInsights(user);
 
   const handleSwipe = (action: 'like' | 'pass') => {
     if (action === 'like') {
+      setIsProcessingMatch(true);
       setTimeout(() => {
         setShowInsights(true);
+        setIsProcessingMatch(false);
       }, 500);
     } else {
       onPass();
@@ -149,17 +152,29 @@ const MatchProfile: React.FC<MatchProfileProps> = ({ user, onPass, onStartChatti
         <div className="flex space-x-4 justify-center">
           <button
             onClick={() => handleSwipe('pass')}
+            disabled={isProcessingMatch}
             className="w-16 h-16 bg-white rounded-full shadow-xl flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transform hover:scale-110 transition-all duration-300"
           >
             <X size={28} />
           </button>
           <button
             onClick={() => handleSwipe('like')}
-            className="w-16 h-16 bg-gradient-to-r from-[#FF6B6B] to-[#2AAC7A] rounded-full shadow-xl flex items-center justify-center text-white hover:shadow-2xl transform hover:scale-110 transition-all duration-300"
+            disabled={isProcessingMatch}
+            className="w-16 h-16 bg-gradient-to-r from-[#FF6B6B] to-[#2AAC7A] rounded-full shadow-xl flex items-center justify-center text-white hover:shadow-2xl transform hover:scale-110 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
-            <Heart size={28} />
+            {isProcessingMatch ? (
+              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Heart size={28} />
+            )}
           </button>
         </div>
+        
+        {isProcessingMatch && (
+          <div className="text-center mt-4">
+            <p className="text-sm text-gray-600">Analyzing your compatibility...</p>
+          </div>
+        )}
       </div>
     </div>
   );

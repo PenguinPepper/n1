@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Camera, Plus, X, ArrowRight } from 'lucide-react';
 import { profileAPI } from '../api';
 import type { User as UserType } from '../types/index';
 
 interface ProfileSetupProps {
   onProfileComplete: (user: UserType) => void;
+  existingProfile?: UserType | null;
 }
 
-const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
+const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete, existingProfile }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -35,6 +37,40 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
   });
 
   const totalSteps = 5;
+
+  // Initialize form data when component mounts or existingProfile changes
+  useEffect(() => {
+    console.log('ProfileSetup: existingProfile changed:', existingProfile); // Debug log
+    if (existingProfile) {
+      console.log('ProfileSetup: Setting edit mode with existing profile'); // Debug log
+      setIsEditMode(true);
+      setFormData({
+        name: existingProfile.name,
+        age: existingProfile.age.toString(),
+        bio: existingProfile.bio,
+        interests: existingProfile.interests.join(', '),
+        photo: existingProfile.photos[0] || '',
+        tastePreferences: {
+          movies: existingProfile.tastePreferences?.movies?.join(', ') || '',
+          music: existingProfile.tastePreferences?.music?.join(', ') || '',
+          books: existingProfile.tastePreferences?.books?.join(', ') || '',
+          tvShows: existingProfile.tastePreferences?.tvShows?.join(', ') || '',
+          genres: existingProfile.tastePreferences?.genres?.join(', ') || '',
+          artists: existingProfile.tastePreferences?.artists?.join(', ') || ''
+        },
+        personality: existingProfile.personality || {
+          openness: 50,
+          conscientiousness: 50,
+          extraversion: 50,
+          agreeableness: 50,
+          neuroticism: 50
+        }
+      });
+    } else {
+      console.log('ProfileSetup: No existing profile, create mode'); // Debug log
+      setIsEditMode(false);
+    }
+  }, [existingProfile]);
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
@@ -62,6 +98,7 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
       }
     }));
   };
+
   const handleInterestAdd = (interest: string) => {
     if (interest.trim() && !formData.interests.split(',').map(i => i.trim()).includes(interest.trim())) {
       const newInterests = formData.interests ? `${formData.interests}, ${interest.trim()}` : interest.trim();
@@ -104,9 +141,11 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
     handleSubmitProfile();
   };
 
-   const handleSubmitProfile = async () => {
+  const handleSubmitProfile = async () => {
     setIsSubmitting(true);
     setError(null);
+
+    console.log('Submitting profile, isEditMode:', isEditMode); // Debug log
 
     try {
       // Prepare the profile data for the API
@@ -127,8 +166,14 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
         }
       };
 
-      // Call the API to create the profile
-      const response = await profileAPI.createProfile(profileData);
+      console.log('Profile data to submit:', profileData); // Debug log
+
+      // Call the appropriate API method based on whether we're creating or updating
+      const response = isEditMode 
+        ? await profileAPI.updateProfile(profileData)
+        : await profileAPI.createProfile(profileData);
+      
+      console.log('API response:', response); // Debug log
       
       if (response.profile) {
         // Convert the API response to the User format expected by the frontend
@@ -143,12 +188,13 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
           tastePreferences: response.profile.tastePreferences
         };
         
+        console.log('Profile operation successful, calling onProfileComplete'); // Debug log
         onProfileComplete(user);
       } else {
-        throw new Error('Profile creation failed - no profile data returned');
+        throw new Error(`Profile ${isEditMode ? 'update' : 'creation'} failed - no profile data returned`);
       }
     } catch (err: any) {
-      console.error('Profile creation error:', err);
+      console.error(`Profile ${isEditMode ? 'update' : 'creation'} error:`, err);
       
       // Handle different types of errors
       if (err.response?.data?.error) {
@@ -165,28 +211,6 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-  const handleCompleteOriginal = () => {
-    const tastePreferences = {
-      movies: formData.tastePreferences.movies.split(',').map(item => item.trim()).filter(item => item),
-      music: formData.tastePreferences.music.split(',').map(item => item.trim()).filter(item => item),
-      books: formData.tastePreferences.books.split(',').map(item => item.trim()).filter(item => item),
-      tvShows: formData.tastePreferences.tvShows.split(',').map(item => item.trim()).filter(item => item),
-      genres: formData.tastePreferences.genres.split(',').map(item => item.trim()).filter(item => item),
-      artists: formData.tastePreferences.artists.split(',').map(item => item.trim()).filter(item => item)
-    };
-
-    const user: UserType = {
-      id: 'current-user',
-      name: formData.name,
-      age: parseInt(formData.age),
-      photos: [formData.photo],
-      bio: formData.bio,
-      interests: formData.interests.split(',').map(i => i.trim()).filter(i => i),
-      personality: formData.personality,
-      tastePreferences: tastePreferences
-    };
-    onProfileComplete(user);
   };
 
   const PersonalitySlider: React.FC<{ 
@@ -224,8 +248,12 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
               <div className="w-16 h-16 bg-gradient-to-r from-[#2AAC7A] to-[#6C5CE7] rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <User size={32} className="text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Tell us about yourself</h2>
-              <p className="text-gray-600">Let's start with the basics</p>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                {isEditMode ? 'Update your info' : 'Tell us about yourself'}
+              </h2>
+              <p className="text-gray-600">
+                {isEditMode ? 'Edit your basic information' : "Let's start with the basics"}
+              </p>
             </div>
 
             <div className="space-y-4">
@@ -263,7 +291,9 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
               <div className="w-16 h-16 bg-gradient-to-r from-[#FF6B6B] to-[#2AAC7A] rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">✨</span>
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Your story</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                {isEditMode ? 'Update your story' : 'Your story'}
+              </h2>
               <p className="text-gray-600">Write a bio that shows your personality</p>
             </div>
 
@@ -291,7 +321,9 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
               <div className="w-16 h-16 bg-gradient-to-r from-[#6C5CE7] to-[#FF6B6B] rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">🎯</span>
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Your interests</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                {isEditMode ? 'Update your interests' : 'Your interests'}
+              </h2>
               <p className="text-gray-600">What are you passionate about?</p>
             </div>
 
@@ -355,7 +387,9 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
               <div className="w-16 h-16 bg-gradient-to-r from-[#2AAC7A] to-[#6C5CE7] rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Camera size={32} className="text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Add your photo</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                {isEditMode ? 'Update your photo' : 'Add your photo'}
+              </h2>
               <p className="text-gray-600">Show your best self</p>
             </div>
 
@@ -439,7 +473,9 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
               <div className="w-16 h-16 bg-gradient-to-r from-[#FF6B6B] to-[#6C5CE7] rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">🎭</span>
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Your Taste Profile</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                {isEditMode ? 'Update your taste profile' : 'Your Taste Profile'}
+              </h2>
               <p className="text-gray-600">Help us understand your cultural preferences</p>
             </div>
 
@@ -556,6 +592,15 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
   return (
     <div className={`min-h-screen bg-gradient-to-br ${getStepGradient()} pt-16 pb-6`}>
       <div className="max-w-md mx-auto">
+        {/* Header with mode indicator */}
+        {isEditMode && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+            <p className="text-blue-800 text-sm text-center font-medium">
+              ✏️ Editing Profile - Your changes will be saved
+            </p>
+          </div>
+        )}
+
         {/* Progress bar */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
@@ -601,11 +646,11 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onProfileComplete }) => {
             {isSubmitting ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Creating Profile...</span>
+                <span>{isEditMode ? 'Updating Profile...' : 'Creating Profile...'}</span>
               </>
             ) : (
               <>
-                <span>{currentStep === totalSteps ? 'Complete Profile' : 'Next'}</span>
+                <span>{currentStep === totalSteps ? (isEditMode ? 'Update Profile' : 'Complete Profile') : 'Next'}</span>
                 <ArrowRight size={20} />
               </>
             )}
