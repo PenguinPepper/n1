@@ -5,7 +5,8 @@ import {
   updateProfile,
   deleteProfile,
   getProfiles,
-  generateBio
+  generateBio,
+  processMatch
 } from '../controllers/profileController';
 import { authenticateUser } from '../middleware/auth';
 import { createProfileValidation, updateProfileValidation } from '../validators/profileValidator';
@@ -35,5 +36,6 @@ router.get('/', getProfiles);
 
 // POST /api/profiles/generate-bio - Generate AI bio
 router.post('/generate-bio', generateBio);
+router.post('/process-match', processMatch);
 
 export default router;
