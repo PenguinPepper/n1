@@ -9,10 +9,7 @@ export const signUp = async (req: Request<{}, AuthResponse, SignUpRequest, ApiRe
     const errors = validationResult(req);
     
     if (!errors.isEmpty()) {
-      res.status(400).json({ 
-        error: 'Validation failed',
-        errors: errors.array()
-      });
+      res.status(400);
       return;
     }
 
@@ -31,9 +28,7 @@ export const signUp = async (req: Request<{}, AuthResponse, SignUpRequest, ApiRe
 
     if (error) {
       console.error('Supabase signup error:', error); // Debug log
-      res.status(400).json({ 
-        error: error.message || 'Failed to create user'
-      });
+      res.status(400);
       return;
     }
 
@@ -60,9 +55,7 @@ export const signUp = async (req: Request<{}, AuthResponse, SignUpRequest, ApiRe
     });
   } catch (error) {
     console.error('Sign up error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error during sign up'
-    });
+    res.status(500);
   }
 };
 
@@ -71,10 +64,7 @@ export const signIn = async (req: Request<{}, AuthResponse, SignInRequest>, res:
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      res.status(400).json({ 
-        error: 'Validation failed',
-        errors: errors.array()
-      });
+      res.status(400);
       return;
     }
 
@@ -93,30 +83,22 @@ export const signIn = async (req: Request<{}, AuthResponse, SignInRequest>, res:
       
       // Handle specific error cases
       if (error.message.includes('Invalid login credentials')) {
-        res.status(401).json({ 
-          error: 'Invalid email or password'
-        });
+        res.status(401);
         return;
       }
       
       if (error.message.includes('Email not confirmed')) {
-        res.status(401).json({ 
-          error: 'Please confirm your email before signing in'
-        });
+        res.status(401);
         return;
       }
 
-      res.status(400).json({ 
-        error: error.message || 'Failed to sign in'
-      });
+      res.status(400);
       return;
     }
 
     // Ensure we have both user and session
     if (!data.user || !data.session) {
-      res.status(400).json({ 
-        error: 'Sign in failed - incomplete authentication data'
-      });
+      res.status(400);
       return;
     }
 
@@ -130,9 +112,7 @@ export const signIn = async (req: Request<{}, AuthResponse, SignInRequest>, res:
     });
   } catch (error) {
     console.error('Sign in error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error during sign in'
-    });
+    res.status(500);
   }
 };
 

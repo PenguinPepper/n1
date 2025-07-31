@@ -520,13 +520,13 @@ export const processMatch = async (
   try {
     const currentUserId = req.user?.id;
     if (!currentUserId) {
-      res.status(401).json({ error: 'User not authenticated' });
+      res.status(401);
       return;
     }
 
     const { targetUserId } = req.body;
     if (!targetUserId) {
-      res.status(400).json({ error: 'Target user ID is required' });
+      res.status(400);
       return;
     }
 
@@ -537,7 +537,7 @@ export const processMatch = async (
     ]);
 
     if (currentUserResult.error || targetUserResult.error) {
-      res.status(404).json({ error: 'One or both user profiles not found' });
+      res.status(404);
       return;
     }
 
@@ -561,7 +561,7 @@ export const processMatch = async (
     });
   } catch (error) {
     console.error('Process match error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500);
   }
 };
 
