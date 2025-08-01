@@ -53,6 +53,16 @@ export interface CurrentVibe {
   timestamp: Date;
 }
 
+export interface DateIdea {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  duration: string;
+  cost: 'Free' | '$' | '$$' | '$$$';
+  vibeMatch: number;
+}
+
 // Auth interfaces
 export interface SignUpRequest {
   email: string;

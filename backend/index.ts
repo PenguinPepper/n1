@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import profileRoutes from './routes/profiles';
+import qlooRoutes from './routes/qloo';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profiles', profileRoutes);
+app.use('/api/qloo', qlooRoutes);
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
