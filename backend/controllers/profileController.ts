@@ -15,6 +15,11 @@ import {
   DatabaseProfile,
   Profile
 } from '../types';
+import OpenAI from 'openai';
+
+//Initialise openai client
+
+const openaiClient = new OpenAI
 
 // Helper function to convert database profile to API profile
 const convertDatabaseProfileToApiProfile = (dbProfile: DatabaseProfile): Profile => ({
@@ -319,8 +324,7 @@ export const generateBio = async (
       currentBio
     });
 
-    // Simulate AI response (in production, you'd call an actual LLM API here)
-    const generatedBio = await simulateAIBioGeneration(prompt, {
+  const generatedBio = await generateAIBio(prompt, {
       interests,
       personality,
       tastePreferences
@@ -385,16 +389,55 @@ const constructBioPrompt = (data: GenerateBioRequest): string => {
 };
 
 // Simulate AI bio generation (replace with actual LLM API call in production)
-const simulateAIBioGeneration = async (
+const generateAIBio = async (
   prompt: string, 
   data: GenerateBioRequest
 ): Promise<string> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
+  try {
+    // Check if OpenAI API key is configured
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    const completion = await openaiClient.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert dating profile writer who creates authentic, engaging, and personalized bios that help people make genuine connections. Write bios that are conversational, specific, and avoid clichés."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: 300,
+      temperature: 0.8,
+      presence_penalty: 0.1,
+      frequency_penalty: 0.1
+    });
+
+    const generatedBio = completion.choices[0]?.message?.content?.trim();
+    
+    if (!generatedBio) {
+      throw new Error('No bio content generated');
+    }
+
+    return generatedBio;
+  } catch (error: any) {
+    console.error('OpenAI API error:', error);
+    
+    // Fallback to template-based generation if OpenAI fails
+    console.log('Falling back to template-based bio generation');
+    return generateFallbackBio(data);
+  }
+};
+
+// Fallback bio generation using templates
+const generateFallbackBio = (data: GenerateBioRequest): string => {
   const { interests, personality, tastePreferences } = data;
   
-  // Generate bio based on user data
+  // Generate bio based on user data using templates
   const bioTemplates = [
     generateCreativeBio(interests, tastePreferences),
     generateAdventurousBio(interests, personality),
