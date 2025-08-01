@@ -1,49 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Clock, DollarSign, Heart, RefreshCw, MapPin } from 'lucide-react';
 import { mockDateIdeas } from '../utils/mockData';
-import type { DateIdea } from '../types';
+import type { DateIdea, User } from '../types';
+import { qlooAPI } from '../api';
 
-const DateIdeas: React.FC = () => {
-  const [ideas, setIdeas] = useState<DateIdea[]>(mockDateIdeas);
+interface DateIdeasProps {
+  currentUser: User | null;
+}
+
+const DateIdeas: React.FC<DateIdeasProps> = ({ currentUser }) => {
+  const [ideas, setIdeas] = useState<DateIdea[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
 
-  const generateNewIdeas = () => {
+  // Generate initial ideas when component mounts
+  useEffect(() => {
+    if (currentUser && !hasInitialLoad) {
+      generateNewIdeas();
+      setHasInitialLoad(true);
+    }
+  }, [currentUser, hasInitialLoad]);
+
+  const generateNewIdeas = async () => {
+    if (!currentUser) {
+      setError('User profile not available. Please complete your profile setup.');
+      return;
+    }
+
     setIsGenerating(true);
-    
-    // Simulate AI generation
-    setTimeout(() => {
-      const newIdeas: DateIdea[] = [
+    setError(null);
+
+    try {
+      // Prepare user data for Qloo API
+      const userData = {
+        interests: currentUser.interests,
+        tastePreferences: currentUser.tastePreferences,
+        personality: currentUser.personality,
+        location: 'New York, NY' // You could make this dynamic based on user location
+      };
+
+      // Call Qloo API through our backend
+      const response = await qlooAPI.generateDateIdeas(userData);
+      
+      if (response.dateIdeas && response.dateIdeas.length > 0) {
+        setIdeas(response.dateIdeas);
+      } else {
+        throw new Error('No date ideas received from API');
+      }
+    } catch (err: any) {
+      console.error('Date ideas generation error:', err);
+      
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else if (err.message) {
+        setError(`Failed to generate date ideas: ${err.message}`);
+      } else {
+        setError('Failed to generate date ideas. Please try again.');
+      }
+      
+      // Set fallback ideas on error
+      setIdeas([
         {
-          id: '4',
-          title: 'Rooftop Stargazing',
-          description: 'Watch the city lights while identifying constellations together',
-          category: 'Romantic & Outdoor',
-          duration: '2-3 hours',
-          cost: 'Free',
-          vibeMatch: 91
-        },
-        {
-          id: '5',
-          title: 'Cooking Class Adventure',
-          description: 'Learn to make pasta from scratch with a local chef',
-          category: 'Food & Learning',
-          duration: '3 hours',
-          cost: '$$$',
-          vibeMatch: 87
-        },
-        {
-          id: '6',
-          title: 'Thrift Store Challenge',
-          description: 'Find the best vintage outfit for each other under $20',
-          category: 'Fun & Shopping',
+          id: 'fallback-1',
+          title: 'Coffee & Conversation',
+          description: 'Discover a cozy local cafe perfect for getting to know each other',
+          category: 'Food & Culture',
           duration: '1-2 hours',
           cost: '$',
-          vibeMatch: 84
+          vibeMatch: 85
+        },
+        {
+          id: 'fallback-2',
+          title: 'Art Gallery Stroll',
+          description: 'Explore contemporary art and share your interpretations',
+          category: 'Arts & Culture',
+          duration: '2-3 hours',
+          cost: '$$',
+          vibeMatch: 82
         }
-      ];
-      setIdeas(newIdeas);
+      ]);
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   const getCostColor = (cost: string) => {
@@ -57,7 +96,7 @@ const DateIdeas: React.FC = () => {
   };
 
   const DateIdeaCard: React.FC<{ idea: DateIdea }> = ({ idea }) => (
-    <div className="bg-white rounded-2xl p-6 pb-28 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+    <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <h3 className="font-bold text-gray-800 text-lg mb-2">{idea.title}</h3>
@@ -126,14 +165,23 @@ const DateIdeas: React.FC = () => {
                 <Sparkles size={20} className="text-white" />
               </div>
               <div>
-                <p className="font-semibold text-gray-800">Based on your matches</p>
+                <p className="font-semibold text-gray-800">
+                  {currentUser ? `Personalized for ${currentUser.name}` : 'Personalized for you'}
+                </p>
                 <p className="text-sm text-gray-600">
-                  {isGenerating ? 'Generating fresh ideas...' : 'Ideas curated for Emma & you'}
+                  {isGenerating ? 'AI is crafting perfect date ideas...' : 'Powered by Qloo AI insights'}
                 </p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Error display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
 
         <div className="space-y-6">
           {ideas.map((idea) => (
@@ -145,7 +193,7 @@ const DateIdeas: React.FC = () => {
           <div className="bg-white rounded-2xl p-8 shadow-lg mt-6">
             <div className="text-center">
               <div className="w-12 h-12 border-4 border-[#2AAC7A] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-gray-600">AI is crafting perfect date ideas...</p>
+              <p className="text-gray-600">Qloo AI is analyzing your preferences and generating personalized date ideas...</p>
             </div>
           </div>
         )}

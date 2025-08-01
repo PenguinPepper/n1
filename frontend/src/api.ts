@@ -98,3 +98,28 @@ export const profileAPI = {
 };
 
 export default api;
+
+export const qlooAPI = {
+  generateDateIdeas: async (userData: {
+    interests?: string[];
+    tastePreferences?: {
+      movies?: string[];
+      music?: string[];
+      books?: string[];
+      tvShows?: string[];
+      genres?: string[];
+      artists?: string[];
+    };
+    personality?: {
+      openness: number;
+      conscientiousness: number;
+      extraversion: number;
+      agreeableness: number;
+      neuroticism: number;
+    };
+    location?: string;
+  }) => {
+    const response = await api.post('/qloo/generate-date-ideas', userData);
+    return response.data;
+  },
+};
