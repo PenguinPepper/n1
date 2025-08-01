@@ -1,7 +1,3 @@
-Here’s a compelling and complete draft for your hackathon submission, Elizabeth. I've taken your core message and fleshed it out with engaging language and structure to highlight the innovation behind **n1**:
-
----
-
 ## 🧠 Inspiration  
 Dating apps often focus on surface-level interests or mutual swipes, leaving users wondering *why* they matched. We wanted to reimagine connection by revealing the cultural threads that weave people together—music tastes, cinematic obsessions, thematic fascinations. **n1** dives deeper, blending psychology, media preferences, and taste mapping to make matches feel intentional and insightful.
 
